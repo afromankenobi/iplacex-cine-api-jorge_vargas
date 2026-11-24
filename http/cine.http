@@ -1,0 +1,80 @@
+# -*- mode: restclient; coding: utf-8; -*-
+# Ejecuto estas solicitudes en orden contra mi MongoDB desechable.
+# Antes activo los hooks en este buffer con M-: (setq-local restclient-enable-eval t) RET
+# Los POST guardan los IDs en memoria. DELETE solo usa la película creada aquí.
+
+:host = http://127.0.0.1:3000
+:pelicula-id = EJECUTA_PRIMERO_03
+:actor-id = EJECUTA_PRIMERO_06
+
+### 01 Bienvenida (200)
+GET :host/
+
+### 02 Listar películas (200)
+GET :host/api/peliculas
+
+### 03 Crear película (201)
+POST :host/api/pelicula
+Content-Type: application/json
+-> run-hook (restclient-set-var ":pelicula-id" (alist-get '_id (let ((json-object-type 'alist) (json-key-type 'symbol)) (json-read-from-string (buffer-string)))))
+
+{
+  "nombre": "La memoria del agua (prueba local)",
+  "géneros": ["Drama"],
+  "anioEstreno": 2015
+}
+
+### 04 Consultar película por ID (200)
+GET :host/api/pelicula/:pelicula-id
+
+### 05 Intentar agregar un actor a una película inexistente (404)
+POST :host/api/actor
+Content-Type: application/json
+
+{
+  "nombre": "Elena Aguirre",
+  "nombrePelicula": "Película inexistente para esta prueba",
+  "edad": 37,
+  "estaRetirado": false,
+  "premios": []
+}
+
+### 06 Agregar al reparto de la película creada (201)
+POST :host/api/actor
+Content-Type: application/json
+-> run-hook (restclient-set-var ":actor-id" (alist-get '_id (let ((json-object-type 'alist) (json-key-type 'symbol)) (json-read-from-string (buffer-string)))))
+
+{
+  "nombre": "Elena Aguirre",
+  "nombrePelicula": "La memoria del agua (prueba local)",
+  "idPelicula": ":pelicula-id",
+  "edad": 37,
+  "estaRetirado": false,
+  "premios": []
+}
+
+### 07 Consultar actor por ID (200)
+GET :host/api/actor/:actor-id
+
+### 08 Listar actores (200)
+GET :host/api/actores
+
+### 09 Actualizar el título de la película (200)
+PUT :host/api/pelicula/:pelicula-id
+Content-Type: application/json
+
+{
+  "nombre": "La memoria del agua (reestreno de prueba)"
+}
+
+### 10 Consultar reparto después de actualizar el título (200)
+GET :host/api/pelicula/:pelicula-id/actores
+
+### 11 Probar un identificador inválido (400)
+GET :host/api/pelicula/id-invalido
+
+### 12 Eliminar película de esta secuencia (200)
+DELETE :host/api/pelicula/:pelicula-id
+
+### 13 Consultar la película eliminada (404)
+GET :host/api/pelicula/:pelicula-id
